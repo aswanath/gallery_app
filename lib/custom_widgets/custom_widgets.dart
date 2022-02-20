@@ -33,7 +33,11 @@ class ImageTile extends StatelessWidget {
                     TextButton(onPressed: (){
                       Navigator.pop(context);
                     }, child: const Text("No")),
-                    TextButton(onPressed: (){
+                    TextButton(onPressed: () async{
+                      File file = File(imagebox[index].imagepath);
+                      if(await file.exists()){
+                        await file.delete();
+                      }
                       imagebox[index].delete();
                       Navigator.pop(context);
                     }, child: const Text("Yes")),
