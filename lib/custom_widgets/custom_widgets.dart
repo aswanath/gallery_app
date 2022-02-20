@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import '../model/image_model.dart';
 
 class ImageTile extends StatelessWidget {
@@ -12,53 +13,35 @@ class ImageTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return FittedBox(
       fit: BoxFit.fill,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          GestureDetector(
+        child:  GestureDetector(
               onTap: (){
                 Navigator.push(context, MaterialPageRoute(builder: (context)=> HeroImage(imagepathhero: imagepath,)));
               },
+              onLongPress: (){
+                showDialog(context: context,
+                    builder: (BuildContext context){
+                      return AlertDialog(
+                        title: const Text("Delete"),
+                        content: const Text("Do you want to delete?"),
+                        actions: [
+                          TextButton(onPressed: (){
+                            Navigator.pop(context);
+                          }, child: const Text("No")),
+                          TextButton(onPressed: () async{
+                            File file = File(imagebox[index].imagepath);
+                            if(await file.exists()){
+                              await file.delete();
+                            }
+                            imagebox[index].delete();
+                            Navigator.pop(context);
+                          }, child: const Text("Yes")),
+                        ],
+                      );
+                    });
+              },
               child: Hero(
                   tag: Text(imagepath!),
-                  child: Image.file(File(imagepath)))),
-          GestureDetector(
-            onTap: (){
-              showDialog(context: context,
-                  builder: (BuildContext context){
-                return AlertDialog(
-                  title: const Text("Delete"),
-                  content: const Text("Do you want to delete?"),
-                  actions: [
-                    TextButton(onPressed: (){
-                      Navigator.pop(context);
-                    }, child: const Text("No")),
-                    TextButton(onPressed: () async{
-                      File file = File(imagebox[index].imagepath);
-                      if(await file.exists()){
-                        await file.delete();
-                      }
-                      imagebox[index].delete();
-                      Navigator.pop(context);
-                    }, child: const Text("Yes")),
-                  ],
-                );
-                  });
-            },
-            child: Opacity(
-              opacity: 1,
-              child: Container(
-                child: const Center(
-                  child: Icon(Icons.delete_rounded,size: 450,color: Colors.red,),
-                ),
-                width: MediaQuery.of(context).size.width*8.8,
-                height: MediaQuery.of(context).size.height*.9,
-                color: Colors.white70,
-              ),
-            ),
-          )
-        ],
-      ),);
+                  child: ClipRRect(child: Image.file(File(imagepath),fit: BoxFit.fill,),))),);
   }
 }
 
