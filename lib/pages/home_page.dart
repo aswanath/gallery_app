@@ -24,35 +24,11 @@ class _HomePageState extends State<HomePage> {
   XFile? _image;
   dynamic _imagepath;
    File? directoryFile;
+   var externaldir;
+   String? externaldirPath;
 
-  getPermissionCamera()async{
-    var checkStatus =  await Permission.camera.status;
-    if(checkStatus.isGranted){
-     getPermissionStorage();
-    } else if(checkStatus.isDenied){
-      await Permission.camera.request();
-    }else{
-      const SnackBar(content: Text("Please enable camera permission to continue",style: TextStyle(color: Colors.white),),backgroundColor: Colors.red,);
-      openAppSettings();
-    }
-    }
-
-  getPermissionStorage()async{
-   var storagePermission = await Permission.storage.status;
-   if(storagePermission.isGranted){
-     getImage();
-   }else if(storagePermission.isDenied){
-     await Permission.storage.request();
-     await Permission.accessMediaLocation;
-     await Permission.manageExternalStorage;
-   }else{
-     const SnackBar(content: Text("Please enable storage permission to continue",style: TextStyle(color: Colors.white),),backgroundColor: Colors.red,);
-     openAppSettings();
-   }
- }
-
-  Future getImage() async {
-    var externaldir = await getExternalStorageDirectory();
+  makeStorage() async{
+    externaldir = await getExternalStorageDirectory();
     String newPath = "";
     List<String> directoryList = externaldir!.path.split('/');
     for(int i=1;i<directoryList.length;i++){
@@ -63,28 +39,67 @@ class _HomePageState extends State<HomePage> {
     }
     newPath += "/MyGallery";
     externaldir = Directory(newPath);
-    String externaldirPath = externaldir.path;
+    externaldirPath = externaldir.path;
+    if(!await externaldir.exists()){
+      await externaldir.create(recursive: true);
+    }
+  }
 
-    Directory? directory = await getApplicationDocumentsDirectory();
-    String directoryPath = directory.path;
 
+  getPermissionCamera()async{
+    var checkStatus =  await Permission.camera.status;
+    if(checkStatus.isGranted){
+     getPermissionStorage();
+    } else if(checkStatus.isDenied){
+      await Permission.camera.request();
+      if(checkStatus.isGranted){
+        getPermissionStorage();
+      }
+    }else{
+      const SnackBar(content: Text("Please enable camera permission to continue",style: TextStyle(color: Colors.white),),backgroundColor: Colors.red,);
+      openAppSettings();
+    }
+    }
 
+  getPermissionStorage()async{
+   var storagePermission = await Permission.storage.status;
+   var managePermission = await Permission.manageExternalStorage.status;
+   var mediaPermission = await Permission.accessMediaLocation.status;
+   if(storagePermission.isGranted && managePermission.isGranted && mediaPermission.isGranted){
+    await makeStorage();
+     if(await externaldir.exists()){
+       getImage();
+     }
+   }else if(storagePermission.isDenied||managePermission.isDenied||mediaPermission.isDenied){
+     await Permission.storage.request();
+     await Permission.accessMediaLocation.request();
+     await Permission.manageExternalStorage.request();
+     if(storagePermission.isGranted && managePermission.isGranted){
+       makeStorage();
+       if(await externaldir.exists()){
+         getImage();
+       }
+     }
+   }else{
+     const SnackBar(content: Text("Please enable storage permission to continue",style: TextStyle(color: Colors.white),),backgroundColor: Colors.red,);
+     openAppSettings();
+   }
+ }
+
+  Future getImage() async {
     ImagePicker _imagePicker = ImagePicker();
     _image = await _imagePicker.pickImage(source: ImageSource.camera);
     if (_image != null) {
       final path = basename(_image!.path);
-      if(!await externaldir.exists()){
-        await externaldir.create(recursive: true);
-      }else{
         directoryFile = await File(_image!.path).copy('$externaldirPath/$path');
-      }
-      final File file = await File(_image!.path).copy('$directoryPath,$path');
       setState(() {
         _imagepath = directoryFile!.path;
         box.add(ImagePath(imagepath: _imagepath));
       });
     }return null;
   }
+
+
 
   @override
   Widget build(BuildContext context) {
